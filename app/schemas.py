@@ -65,3 +65,28 @@ class QueryResponse(BaseModel):
     mode: str
     latency_ms: float
     citations: List[Citation]
+
+
+class EvalCase(BaseModel):
+    """Single labeled evaluation case for retrieval quality."""
+
+    question: str = Field(..., min_length=3)
+    expected_page: Optional[int] = Field(default=None, ge=1)
+    expected_keyword: Optional[str] = Field(default=None, min_length=1)
+
+
+class EvaluateRequest(BaseModel):
+    """Batch retrieval evaluation request."""
+
+    document_id: Optional[str] = None
+    top_k: int = Field(default=3, ge=1, le=10)
+    cases: List[EvalCase] = Field(..., min_length=1)
+
+
+class EvaluateResponse(BaseModel):
+    """Aggregate retrieval metrics across evaluation cases."""
+
+    total_cases: int
+    hit_rate_at_k: float
+    mrr: float
+    avg_latency_ms: float

@@ -73,6 +73,45 @@ class TestDocuQueryAPI(unittest.TestCase):
         del_res = self.client.delete(f"/api/v1/documents/{doc['id']}")
         self.assertEqual(del_res.status_code, 204)
 
+    def test_03_rag_evaluation_metrics(self):
+        ingest_res = self.client.post(
+            "/api/v1/documents",
+            json={
+                "title": "Logistics SLA",
+                "pages": [
+                    {"page_number": 1, "text": "Warehouse dispatch SLA is 4 hours for Tier-1 hubs."},
+                    {"page_number": 2, "text": "Cold chain telemetry runs every 15 minutes."},
+                ],
+            },
+        )
+        self.assertEqual(ingest_res.status_code, 201)
+        doc_id = ingest_res.json()["id"]
+
+        eval_res = self.client.post(
+            "/api/v1/evaluate",
+            json={
+                "document_id": doc_id,
+                "top_k": 2,
+                "cases": [
+                    {
+                        "question": "What is the warehouse dispatch SLA?",
+                        "expected_page": 1,
+                        "expected_keyword": "4 hours",
+                    },
+                    {
+                        "question": "How often does cold chain telemetry run?",
+                        "expected_page": 2,
+                        "expected_keyword": "15 minutes",
+                    },
+                ],
+            },
+        )
+        self.assertEqual(eval_res.status_code, 200)
+        metrics = eval_res.json()
+        self.assertEqual(metrics["total_cases"], 2)
+        self.assertEqual(metrics["hit_rate_at_k"], 1.0)
+        self.assertEqual(metrics["mrr"], 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()
