@@ -1,6 +1,12 @@
 # DocuQuery — Page-Cited RAG REST API
 
-Production-ready Retrieval-Augmented Generation (RAG) REST API built with **FastAPI**, **SQLAlchemy**, **scikit-learn (TF-IDF Cosine Retrieval)**, and optional **Gemini** answer synthesis, complete with **page-level citations**, a **Postman collection**, **Streamlit UI**, and **Docker** support.
+Production-ready Retrieval-Augmented Generation (RAG) REST API built with **FastAPI**, **SQLAlchemy**, **scikit-learn (TF-IDF Cosine Retrieval)**, and optional **Gemini** answer synthesis, complete with **page-level citations**, an automated **RAG evaluation endpoint** (`Hit Rate@K`, `MRR`), a **Postman collection**, **Streamlit UI**, **Docker**, and **GitHub Actions CI**.
+
+## Live Deployment
+
+- **Live API:** https://docuquery-api-vs52.onrender.com
+- **Interactive Swagger Docs:** https://docuquery-api-vs52.onrender.com/docs
+- **Health Check:** https://docuquery-api-vs52.onrender.com/health
 
 ## Architecture
 
