@@ -4,6 +4,7 @@ Production-ready Retrieval-Augmented Generation (RAG) REST API built with **Fast
 
 ## Live Deployment
 
+- **Live Web App (Streamlit UI):** https://docuquery-n2vvwj7rq9dlvirhus6zjb.streamlit.app/
 - **Live API:** https://docuquery-api-vs52.onrender.com
 - **Interactive Swagger Docs:** https://docuquery-api-vs52.onrender.com/docs
 - **Health Check:** https://docuquery-api-vs52.onrender.com/health
