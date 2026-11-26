@@ -38,6 +38,10 @@ class TestDocuQueryAPI(unittest.TestCase):
         cls._tmp_dir.cleanup()
 
     def test_01_health_check(self):
+        ui_res = self.client.get("/")
+        self.assertEqual(ui_res.status_code, 200)
+        self.assertIn("DocuQuery", ui_res.text)
+
         res = self.client.get("/health")
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.json()["status"], "ok")

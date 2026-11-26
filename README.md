@@ -10,8 +10,7 @@
 
 | Component | URL |
 | :--- | :--- |
-| **Web App (Streamlit UI)** | https://docuquery-n2vvwj7rq9dlvirhus6zjb.streamlit.app/ |
-| **REST API (Render)** | https://docuquery-api-vs52.onrender.com |
+| **Live Web App (Stitch UI)** | https://docuquery-api-vs52.onrender.com/ |
 | **Interactive Swagger Docs** | https://docuquery-api-vs52.onrender.com/docs |
 | **Health Check** | https://docuquery-api-vs52.onrender.com/health |
 

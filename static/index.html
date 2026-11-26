@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocuQuery — Page-Cited RAG Workbench</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400..600,0..1,0" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: "#faf8ff",
+            "surface-low": "#f2f3ff",
+            "surface-container": "#eaedff",
+            "surface-high": "#e2e7ff",
+            "on-surface": "#131b2e",
+            "on-surface-variant": "#464555",
+            primary: "#4f46e5",
+            "primary-dark": "#3525cd",
+            emerald: { 600: "#059669", 50: "#ecfdf5", 200: "#a7f3d0" }
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
+  <!-- Top Header -->
+  <header class="sticky top-0 z-40 h-16 bg-white/95 backdrop-blur border-b border-slate-200 px-6 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-800 text-white flex items-center justify-center shadow-sm">
+          <span class="material-symbols-outlined text-[20px]">find_in_page</span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-semibold text-base tracking-tight text-slate-900">DocuQuery</span>
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">RAG Workbench</span>
+          </div>
+        </div>
+      </div>
+      <div class="hidden sm:block h-5 w-px bg-slate-200"></div>
+      <div id="apiStatusPill" class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        <span>Checking API...</span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <div class="inline-flex rounded-lg bg-slate-100 p-1">
+        <button id="tabQueryBtn" onclick="switchTab('query')" class="px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-900 shadow-sm transition">Query &amp; Citations</button>
+        <button id="tabEvalBtn" onclick="switchTab('eval')" class="px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition">Evaluation Benchmark</button>
+      </div>
+      <a href="/docs" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-slate-700 transition">
+        <span class="material-symbols-outlined text-[16px]">terminal</span>
+        <span>Swagger Docs</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Workbench Layout -->
+  <div class="flex-1 flex flex-col lg:flex-row max-w-[1600px] w-full mx-auto">
+    <!-- Left Corpus Sidebar -->
+    <aside class="w-full lg:w-96 flex-shrink-0 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white p-5 flex flex-col gap-5">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Corpus Ingestion</span>
+          <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600">PDF &amp; Text</span>
+        </div>
+        <label id="dropzone" class="group relative flex flex-col items-center justify-center p-5 rounded-xl border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-indigo-50/40 hover:bg-indigo-50/70 transition cursor-pointer">
+          <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-105 transition">
+            <span class="material-symbols-outlined text-[22px]">cloud_upload</span>
+          </div>
+          <p class="text-sm font-semibold text-slate-800">Drop PDF here or browse</p>
+          <p class="text-xs text-slate-500 mt-0.5">Extracts text per page &amp; indexes chunks</p>
+          <input id="pdfInput" type="file" accept=".pdf" class="hidden" onchange="handlePdfUpload(this.files[0])" />
+        </label>
+        <p id="uploadStatus" class="text-xs mt-2 hidden"></p>
+      </div>
+
+      <!-- Collapsible Raw Text -->
+      <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+        <button type="button" onclick="toggleRawText()" class="w-full flex items-center justify-between text-left">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-indigo-600">data_object</span>
+            <span class="text-xs font-semibold text-slate-800">Paste Raw Text</span>
+          </div>
+          <span id="rawChevron" class="material-symbols-outlined text-[18px] text-slate-500">expand_more</span>
+        </button>
+        <div id="rawTextBox" class="hidden mt-3 flex flex-col gap-2.5">
+          <input id="rawTitle" type="text" placeholder="Document title (e.g., SLA Policy)" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-indigo-500" />
+          <textarea id="rawContent" rows="4" placeholder="Paste policy, financial report, or notes..." class="w-full px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+          <button type="button" onclick="handleTextIngest()" class="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition">Chunk &amp; Index Text</button>
+        </div>
+      </div>
+
+      <!-- Indexed Documents List -->
+      <div class="flex-1 flex flex-col min-h-0">
+        <div class="flex items-center justify-between mb-2.5">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Indexed Documents</span>
+          <span id="docCountBadge" class="font-mono text-[11px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold">0 Active</span>
+        </div>
+        <div id="docList" class="flex flex-col gap-2 overflow-y-auto max-h-[420px] pr-0.5">
+          <p class="text-xs text-slate-400">Loading documents...</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-6 lg:p-8 overflow-y-auto">
+      <!-- Query Panel -->
+      <section id="panelQuery" class="max-w-4xl mx-auto flex flex-col gap-6">
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Ask a Question</label>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+              <span class="material-symbols-outlined absolute left-3 top-2.5 text-[20px] text-slate-400">search</span>
+              <input id="questionInput" type="text" placeholder="e.g., What is the warehouse dispatch SLA or credit risk weight?" onkeydown="if(event.key==='Enter') runQuery()" class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-300 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100" />
+            </div>
+            <button id="queryBtn" type="button" onclick="runQuery()" class="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition">
+              <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+              <span>Run RAG Query</span>
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-100">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-500 font-medium">Scope:</span>
+              <select id="scopeSelect" class="text-xs border border-slate-200 rounded-md px-2.5 py-1 bg-slate-50 text-slate-700 focus:outline-none focus:border-indigo-500">
+                <option value="">All Indexed Documents</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-slate-500 font-medium mr-1">Top-K:</span>
+              <button type="button" onclick="setTopK(3)" data-k="3" class="k-btn px-2.5 py-1 rounded text-xs font-mono font-semibold bg-indigo-600 text-white">k=3</button>
+              <button type="button" onclick="setTopK(5)" data-k="5" class="k-btn px-2.5 py-1 rounded text-xs font-mono font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">k=5</button>
+              <button type="button" onclick="setTopK(10)" data-k="10" class="k-btn px-2.5 py-1 rounded text-xs font-mono font-medium bg-slate-100 text-slate-600 hover:bg-slate-200">k=10</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Answer & Citations Output -->
+        <div id="queryOutput" class="hidden flex flex-col gap-5">
+          <div class="bg-white border border-indigo-200 border-l-4 border-l-indigo-600 rounded-xl p-5 shadow-sm">
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px] text-indigo-600">verified</span>
+                <h2 class="text-sm font-semibold text-slate-900">Synthesized Grounded Answer</h2>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="answerMode" class="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200"></span>
+                <span id="answerLatency" class="font-mono text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 font-semibold"></span>
+              </div>
+            </div>
+            <p id="answerText" class="text-sm leading-relaxed text-slate-700"></p>
+            <div id="answerChips" class="flex flex-wrap gap-1.5 mt-3"></div>
+          </div>
+
+          <div>
+            <h3 id="citationsHeading" class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Retrieved Source Citations</h3>
+            <div id="citationsList" class="flex flex-col gap-3"></div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="bg-white border border-slate-200 rounded-xl p-10 text-center">
+          <div class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+            <span class="material-symbols-outlined text-[24px]">description</span>
+          </div>
+          <h3 class="text-sm font-semibold text-slate-900">Ready for Page-Cited Retrieval</h3>
+          <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">Upload a PDF or paste raw text in the left sidebar, then ask any question to inspect ranked passages, cosine similarity scores, and exact page citations.</p>
+        </div>
+      </section>
+
+      <!-- Evaluation Panel -->
+      <section id="panelEval" class="hidden max-w-4xl mx-auto flex flex-col gap-6">
+        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <h2 class="text-sm font-semibold text-slate-900">Retrieval Evaluation Benchmark</h2>
+          <p class="text-xs text-slate-500 mt-0.5 mb-4">Run <code class="font-mono bg-slate-100 px-1 rounded">POST /api/v1/evaluate</code> to measure Hit Rate@K, Mean Reciprocal Rank (MRR), and retrieval latency.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Test Question</label>
+              <input id="evalQuestion" type="text" placeholder="What is the dispatch SLA?" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Expected Page</label>
+              <input id="evalPage" type="number" min="1" value="1" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Expected Keyword</label>
+              <input id="evalKeyword" type="text" placeholder="e.g., 4 hours" class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500" />
+            </div>
+          </div>
+
+          <button type="button" onclick="runEvaluation()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition">
+            <span class="material-symbols-outlined text-[16px]">monitoring</span>
+            <span>Run Benchmark</span>
+          </button>
+        </div>
+
+        <div id="evalResults" class="hidden grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-white border border-slate-200 rounded-xl p-4">
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Hit Rate @ 3</p>
+            <p id="evalHitRate" class="text-2xl font-bold font-mono text-slate-900 mt-1">-</p>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-xl p-4">
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">MRR</p>
+            <p id="evalMrr" class="text-2xl font-bold font-mono text-indigo-600 mt-1">-</p>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-xl p-4">
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Avg Latency</p>
+            <p id="evalLatency" class="text-2xl font-bold font-mono text-emerald-600 mt-1">-</p>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-xl p-4">
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total Cases</p>
+            <p id="evalTotal" class="text-2xl font-bold font-mono text-slate-900 mt-1">-</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let currentTopK = 3;
+    let selectedDocId = "";
+
+    function esc(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function switchTab(tab) {
+      const qPanel = document.getElementById("panelQuery");
+      const ePanel = document.getElementById("panelEval");
+      const qBtn = document.getElementById("tabQueryBtn");
+      const eBtn = document.getElementById("tabEvalBtn");
+      if (tab === "query") {
+        qPanel.classList.remove("hidden");
+        ePanel.classList.add("hidden");
+        qBtn.className = "px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-900 shadow-sm transition";
+        eBtn.className = "px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition";
+      } else {
+        ePanel.classList.remove("hidden");
+        qPanel.classList.add("hidden");
+        eBtn.className = "px-3 py-1.5 rounded-md text-xs font-semibold bg-white text-slate-900 shadow-sm transition";
+        qBtn.className = "px-3 py-1.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 transition";
+      }
+    }
+
+    function toggleRawText() {
+      const box = document.getElementById("rawTextBox");
+      const chev = document.getElementById("rawChevron");
+      box.classList.toggle("hidden");
+      chev.textContent = box.classList.contains("hidden") ? "expand_more" : "expand_less";
+    }
+
+    function setTopK(k) {
+      currentTopK = k;
+      document.querySelectorAll(".k-btn").forEach((btn) => {
+        const active = Number(btn.dataset.k) === k;
+        btn.className = active
+          ? "k-btn px-2.5 py-1 rounded text-xs font-mono font-semibold bg-indigo-600 text-white"
+          : "k-btn px-2.5 py-1 rounded text-xs font-mono font-medium bg-slate-100 text-slate-600 hover:bg-slate-200";
+      });
+    }
+
+    function showStatus(msg, isError = false) {
+      const el = document.getElementById("uploadStatus");
+      el.textContent = msg;
+      el.className = `text-xs mt-2 ${isError ? "text-red-600" : "text-emerald-600"} font-medium`;
+      el.classList.remove("hidden");
+    }
+
+    async function checkHealth() {
+      const pill = document.getElementById("apiStatusPill");
+      try {
+        const res = await fetch("/health");
+        if (res.ok) {
+          pill.className = "hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold";
+          pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>API Connected</span>';
+        }
+      } catch (_) {}
+    }
+
+    async function loadDocuments() {
+      const list = document.getElementById("docList");
+      const badge = document.getElementById("docCountBadge");
+      const scope = document.getElementById("scopeSelect");
+      try {
+        const res = await fetch("/api/v1/documents");
+        const docs = await res.json();
+        badge.textContent = `${docs.length} Active`;
+        scope.innerHTML = '<option value="">All Indexed Documents</option>' +
+          docs.map((d) => `<option value="${esc(d.id)}">${esc(d.title)} (${d.page_count}p)</option>`).join("");
+        if (selectedDocId) scope.value = selectedDocId;
+
+        if (!docs.length) {
+          list.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">No documents indexed yet.</p>';
+          return;
+        }
+        list.innerHTML = docs.map((d) => `
+          <div class="p-3 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white transition flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px] text-indigo-600">description</span>
+                <p class="text-xs font-semibold text-slate-900 truncate">${esc(d.title)}</p>
+              </div>
+              <div class="flex items-center gap-1.5 mt-1.5 font-mono text-[11px]">
+                <span class="px-1.5 py-0.5 rounded bg-white border border-slate-200 text-slate-600">${d.page_count}p</span>
+                <span class="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700">${d.chunk_count} chunks</span>
+              </div>
+            </div>
+            <button type="button" onclick="deleteDoc('${esc(d.id)}')" title="Delete" class="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition">
+              <span class="material-symbols-outlined text-[16px]">delete</span>
+            </button>
+          </div>
+        `).join("");
+      } catch (err) {
+        list.innerHTML = '<p class="text-xs text-red-500">Failed to load documents.</p>';
+      }
+    }
+
+    async function handlePdfUpload(file) {
+      if (!file) return;
+      showStatus(`Uploading ${file.name}...`);
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const res = await fetch("/api/v1/documents/upload", { method: "POST", body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Upload failed");
+        showStatus(`Indexed "${data.title}" (${data.page_count}p, ${data.chunk_count} chunks)`);
+        await loadDocuments();
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    }
+
+    async function handleTextIngest() {
+      const title = document.getElementById("rawTitle").value.trim();
+      const content = document.getElementById("rawContent").value.trim();
+      if (!title || !content) return showStatus("Provide both title and text.", true);
+      showStatus("Indexing text...");
+      try {
+        const res = await fetch("/api/v1/documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, content, source_type: "text" })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Ingestion failed");
+        document.getElementById("rawTitle").value = "";
+        document.getElementById("rawContent").value = "";
+        showStatus(`Indexed "${data.title}" (${data.chunk_count} chunks)`);
+        await loadDocuments();
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    }
+
+    async function deleteDoc(id) {
+      await fetch(`/api/v1/documents/${encodeURIComponent(id)}`, { method: "DELETE" });
+      await loadDocuments();
+    }
+
+    async function runQuery() {
+      const question = document.getElementById("questionInput").value.trim();
+      if (!question) return;
+      const docId = document.getElementById("scopeSelect").value || null;
+      const btn = document.getElementById("queryBtn");
+      btn.disabled = true;
+      btn.innerHTML = '<span class="text-xs">Searching...</span>';
+
+      try {
+        const res = await fetch("/api/v1/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, top_k: currentTopK, document_id: docId })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Query failed");
+
+        document.getElementById("emptyState").classList.add("hidden");
+        document.getElementById("queryOutput").classList.remove("hidden");
+        document.getElementById("answerMode").textContent = `mode: ${data.mode}`;
+        document.getElementById("answerLatency").textContent = `${data.latency_ms} ms`;
+        document.getElementById("answerText").textContent = data.answer;
+        document.getElementById("answerChips").innerHTML = data.citations.map((c) =>
+          `<span class="font-mono text-[11px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">${esc(c.document_title)} · Page ${c.page_number}</span>`
+        ).join("");
+
+        document.getElementById("citationsHeading").textContent = `Retrieved Source Citations (${data.citations.length})`;
+        document.getElementById("citationsList").innerHTML = data.citations.map((c, idx) => {
+          const pct = Math.min(100, Math.max(6, Math.round(c.score * 100)));
+          return `
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold">#${idx + 1}</span>
+                  <span class="text-xs font-semibold text-slate-900">${esc(c.document_title)}</span>
+                  <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">Page ${c.page_number}</span>
+                  <span class="font-mono text-[11px] text-slate-400">Chunk ${c.chunk_index}</span>
+                </div>
+                <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">Cosine: ${c.score.toFixed(4)}</span>
+              </div>
+              <div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+                <div class="h-full bg-gradient-to-r from-indigo-600 to-emerald-500 rounded-full" style="width:${pct}%"></div>
+              </div>
+              <p class="text-xs leading-relaxed text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-3">${esc(c.snippet)}</p>
+            </div>
+          `;
+        }).join("");
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined text-[18px]">auto_awesome</span><span>Run RAG Query</span>';
+      }
+    }
+
+    async function runEvaluation() {
+      const question = document.getElementById("evalQuestion").value.trim();
+      const expected_page = Number(document.getElementById("evalPage").value) || 1;
+      const expected_keyword = document.getElementById("evalKeyword").value.trim() || null;
+      if (!question) return alert("Enter a test question.");
+      const res = await fetch("/api/v1/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ top_k: 3, cases: [{ question, expected_page, expected_keyword }] })
+      });
+      const m = await res.json();
+      if (!res.ok) return alert(m.detail || "Evaluation failed");
+      document.getElementById("evalResults").classList.remove("hidden");
+      document.getElementById("evalHitRate").textContent = `${(m.hit_rate_at_k * 100).toFixed(1)}%`;
+      document.getElementById("evalMrr").textContent = m.mrr.toFixed(3);
+      document.getElementById("evalLatency").textContent = `${m.avg_latency_ms} ms`;
+      document.getElementById("evalTotal").textContent = m.total_cases;
+    }
+
+    // Drag and drop support
+    const dz = document.getElementById("dropzone");
+    dz.addEventListener("dragover", (e) => { e.preventDefault(); dz.classList.add("border-indigo-500"); });
+    dz.addEventListener("dragleave", () => dz.classList.remove("border-indigo-500"));
+    dz.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dz.classList.remove("border-indigo-500");
+      if (e.dataTransfer.files.length) handlePdfUpload(e.dataTransfer.files[0]);
+    });
+
+    checkHealth();
+    loadDocuments();
+  </script>
+</body>
+</html>

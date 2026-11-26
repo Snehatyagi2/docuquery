@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
 import importlib.util
 import io
+from pathlib import Path
 import time
 from typing import List
 import uuid
 
 from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -35,6 +37,17 @@ app = FastAPI(
     description="Page-cited RAG API with SQLite/PostgreSQL persistence and REST endpoints.",
     lifespan=lifespan,
 )
+
+
+STATIC_INDEX = Path(__file__).resolve().parent.parent / "static" / "index.html"
+
+
+@app.get("/", include_in_schema=False)
+def serve_web_ui():
+    """Serve the Stitch-designed DocuQuery web application."""
+    if not STATIC_INDEX.exists():
+        raise HTTPException(status_code=404, detail="Web UI not found.")
+    return FileResponse(STATIC_INDEX)
 
 
 @app.get("/health", tags=["System"])
