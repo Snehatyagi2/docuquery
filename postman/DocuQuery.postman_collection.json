@@ -1,0 +1,95 @@
+{
+  "info": {
+    "name": "DocuQuery RAG API",
+    "description": "REST API collection for ingesting documents, querying page-cited RAG answers, and managing indexed documents.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8000" },
+    { "key": "docId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Service is ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "Ingest Multi-Page Document",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('docId', data.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Supply Chain SLA Report\",\n  \"source_type\": \"pdf\",\n  \"pages\": [\n    { \"page_number\": 1, \"text\": \"Warehouse dispatch SLA target is under 4 hours for Tier-1 cities.\" },\n    { \"page_number\": 2, \"text\": \"Cold-chain shipments require continuous telemetry alerts every 15 minutes.\" }\n  ]\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/documents"
+      }
+    },
+    {
+      "name": "List Documents",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/v1/documents"
+      }
+    },
+    {
+      "name": "Query RAG with Page Citations",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns citations', () => pm.expect(pm.response.json().citations.length).to.be.above(0));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is the dispatch SLA target for Tier-1 cities?\",\n  \"top_k\": 3,\n  \"document_id\": \"{{docId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/v1/query"
+      }
+    },
+    {
+      "name": "Delete Document",
+      "request": {
+        "method": "DELETE",
+        "url": "{{baseUrl}}/api/v1/documents/{{docId}}"
+      }
+    }
+  ]
+}
