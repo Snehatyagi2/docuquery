@@ -10,9 +10,10 @@
 
 | Component | URL |
 | :--- | :--- |
-| **Live Web App (Stitch UI)** | https://docuquery-api-vs52.onrender.com/ |
-| **Interactive Swagger Docs** | https://docuquery-api-vs52.onrender.com/docs |
-| **Health Check** | https://docuquery-api-vs52.onrender.com/health |
+| **Live Web App (AWS EC2 + Docker + k3s)** | http://16.179.104.253/ |
+| **AWS Swagger Docs** | http://16.179.104.253/docs |
+| **Render Web App (Backup)** | https://docuquery-api-vs52.onrender.com/ |
+| **Render Swagger Docs** | https://docuquery-api-vs52.onrender.com/docs |
 
 > **Note:** The backend runs on Render's free tier and sleeps after 15 minutes of inactivity; the first request after an idle period may take ~30–50 seconds to wake up.
 
