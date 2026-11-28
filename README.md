@@ -41,7 +41,7 @@ flowchart LR
     Synth --> API
 ```
 
-For a deeper technical breakdown (chunking parameters, retrieval scoring, and evaluation metrics), see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+For a deeper technical breakdown (chunking parameters, retrieval scoring, and evaluation metrics), see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). For the step-by-step AWS EC2 + Docker + Nginx deployment runbook, see [docs/DEPLOYMENT_AWS.md](docs/DEPLOYMENT_AWS.md).
 
 ---
 
